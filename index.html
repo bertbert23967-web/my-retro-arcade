@@ -1,1 +1,55 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Retro Arcade</title>
+    <!-- Force performance multi-threading headers for 3D Emulators -->
+    <script src="https://unpkg.com"></script>
+    
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .console-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .card {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            cursor: pointer;
+        }
+        .card:hover {
+            border-color: #ff0055;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕹️ My AI Retro Arcade 🎮</h1>
+        <p>Select a console to view games</p>
+        
+        <div class="console-grid">
+            <div class="card" onclick="alert('N64 Selected! Ready to load game core.')">Nintendo 64</div>
+            <div class="card" onclick="alert('PS1 Selected! Ready to load game core.')">PlayStation 1</div>
+            <div class="card" onclick="alert('Dreamcast Selected! Ready to load game core.')">Sega Dreamcast</div>
+            <div class="card" onclick="alert('Virtual Boy Selected! Ready to load game core.')">Virtual Boy</div>
+            <div class="card" onclick="alert('DS Selected! Ready to load game core.')">Nintendo DS</div>
+            <div class="card" onclick="alert('PSP Selected! Ready to load game core.')">PlayStation Portable</div>
+        </div>
+    </div>
+</body>
+</html>
