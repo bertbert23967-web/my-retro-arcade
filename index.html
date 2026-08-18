@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RetroVault — Browser Retro Emulator</title>
+<meta name="description" content="Play your own retro game backups directly in the browser with EmulatorJS. No installs, no plugins." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕹️</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0e13;
+    --bg-elevated: #12161f;
+    --bg-card: #161b26;
+    --border: #232a38;
+    --text-primary: #eef1f6;
+    --text-secondary: #8b93a7;
+    --text-muted: #5c6478;
+
+    --primary: #3b82f6;
+    --primary-dark: #1d4ed8;
+    --secondary: #06b6d4;
+    --accent: #f59e0b;
+    --success: #22c55e;
+    --warning: #f97316;
+    --error: #ef4444;
+
+    --n64: #22c55e;
+    --psx: #3b82f6;
+    --dreamcast: #f97316;
+    --vb: #ef4444;
+    --nds: #06b6d4;
+    --psp: #f59e0b;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --shadow-lg: 0 20px 40px -12px rgba(0, 0, 0, 0.5);
+    --font-heading: "Space Grotesk", "Inter", sans-serif;
+    --font-body: "Inter", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: radial-gradient(circle at 20% 0%, #131824 0%, var(--bg) 45%);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3 { font-family: var(--font-heading); font-weight: 700; line-height: 1.2; }
+
+  a { color: inherit; }
+
+  img, svg { display: block; }
+
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ===== Layout shell ===== */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+  header.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    backdrop-filter: blur(12px);
+    background: rgba(11, 14, 19, 0.85);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 12px; }
+
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .brand-text h1 { font-size: 18px; letter-spacing: -0.01em; }
+  .brand-text span { font-size: 12px; color: var(--text-secondary); }
+
+  .header-links { display: flex; gap: 8px; }
+
+  .pill-badge {
+    font-size: 12px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--bg-elevated);
+  }
+
+  /* ===== Hero ===== */
+  .hero { padding: 64px 24px 40px; text-align: center; }
+  .hero h2 {
+    font-size: clamp(28px, 5vw, 44px);
+    background: linear-gradient(135deg, #f4f6fb, #97a3c2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 16px;
+  }
+  .hero p {
+    color: var(--text-secondary);
+    max-width: 560px;
+    margin: 0 auto;
+    font-size: 16px;
+  }
+
+  /* ===== Dashboard grid ===== */
+  main { padding-bottom: 96px; }
+
+  .section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .section-heading h3 { font-size: 20px; }
+  .section-heading span { color: var(--text-muted); font-size: 13px; }
+
+  .console-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+  }
+
+  .console-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    text-align: left;
+    color: inherit;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    opacity: 0;
+    animation: cardIn 0.5s ease forwards;
+  }
+  .console-card:nth-child(1) { animation-delay: 0.05s; }
+  .console-card:nth-child(2) { animation-delay: 0.1s; }
+  .console-card:nth-child(3) { animation-delay: 0.15s; }
+  .console-card:nth-child(4) { animation-delay: 0.2s; }
+  .console-card:nth-child(5) { animation-delay: 0.25s; }
+  .console-card:nth-child(6) { animation-delay: 0.3s; }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .console-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 100% 0%, var(--accent-color, var(--primary)) 0%, transparent 55%);
+    opacity: 0.12;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .console-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--accent-color, var(--primary));
+    box-shadow: var(--shadow-lg);
+  }
+  .console-card:hover::before { opacity: 0.22; }
+
+  .console-badge {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 14px;
+    color: #0b0e13;
+    background: var(--accent-color, var(--primary));
+    margin-bottom: 20px;
+  }
+
+  .console-card h4 { font-size: 17px; margin-bottom: 6px; }
+  .console-card p { color: var(--text-secondary); font-size: 13px; margin-bottom: 18px; }
+
+  .console-card .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--accent-color, var(--primary));
+    font-weight: 600;
+  }
+
+  /* ===== Modal ===== */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 8, 12, 0.7);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+
+  .modal {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 28px;
+    transform: translateY(16px) scale(0.98);
+    transition: transform 0.25s ease;
+  }
+  .overlay.open .modal { transform: translateY(0) scale(1); }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .modal-header-info { display: flex; align-items: center; gap: 12px; }
+
+  .modal-close {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s ease;
+  }
+  .modal-close:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+  .modal p.modal-hint {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+
+  .game-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .game-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .game-row-title { font-size: 14px; font-weight: 600; }
+  .game-row-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .game-row-actions { display: flex; align-items: center; gap: 8px; }
+  .game-row.custom { border-style: dashed; border-color: var(--accent-color, var(--primary)); }
+  .game-row.custom .game-row-sub::before { content: "Your upload · "; opacity: 0.8; }
+
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+  .icon-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+  .add-rom-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .add-rom-row:hover {
+    border-color: var(--accent-color, var(--primary));
+    color: var(--accent-color, var(--primary));
+    background: rgba(255,255,255,0.02);
+  }
+  .add-rom-row .plus {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .add-menu {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .add-menu.open { display: flex; }
+  .add-menu-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  .add-menu-option:hover { border-color: var(--accent-color, var(--primary)); }
+  .add-menu-option .opt-icon { font-size: 15px; }
+  .add-menu-option .opt-sub { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+  .add-menu-option .opt-text { display: flex; flex-direction: column; }
+  .add-menu-option .opt-text strong { font-size: 13px; }
+
+  .url-input-group { display: none; flex-direction: column; gap: 8px; }
+  .url-input-group.open { display: flex; }
+  .url-input-group input {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+  }
+  .url-input-group input:focus { border-color: var(--accent-color, var(--primary)); }
+  .url-input-group input::placeholder { color: var(--text-muted); }
+  .url-input-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  .btn {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .btn-primary { background: var(--accent-color, var(--primary)); color: #0b0e13; }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+  /* ===== Player section ===== */
+  #player-section {
+    max-width: 900px;
+    margin: 0 auto 64px;
+    padding: 0 24px;
+  }
+  #player-section[hidden] { display: none; }
+
+  .player-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .player-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .player-panel-header h4 { font-size: 15px; }
+  .player-panel-header span { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  #game {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #000;
+  }
+
+  /* ===== Floating hosting-guide panel ===== */
+  .guide-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 13.5px;
+    box-shadow: 0 12px 30px -8px rgba(59, 130, 246, 0.55);
+    transition: transform 0.2s ease;
+  }
+  .guide-toggle:hover { transform: translateY(-2px); }
+
+  .guide-panel {
+    position: fixed;
+    bottom: 90px;
+    right: 24px;
+    z-index: 40;
+    width: min(380px, calc(100vw - 48px));
+    max-height: min(70vh, 640px);
+    overflow-y: auto;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(12px) scale(0.97);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.22s ease;
+  }
+  .guide-panel.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+
+  .guide-panel h4 { font-size: 15px; margin-bottom: 4px; }
+  .guide-panel > p.guide-sub { color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px; }
+
+  .guide-step { margin-bottom: 16px; }
+  .guide-step h5 {
+    font-size: 12.5px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .guide-step p, .guide-step li { font-size: 13px; color: var(--text-secondary); }
+  .guide-step ul { padding-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+
+  code {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--secondary);
+  }
+
+  .guide-warning {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+
+  /* ===== Footer ===== */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 28px 24px 40px;
+    text-align: center;
+  }
+  footer p { font-size: 12.5px; color: var(--text-muted); max-width: 640px; margin: 0 auto 6px; }
+
+  @media (max-width: 640px) {
+    .header-inner { padding: 14px 16px; }
+    .hero { padding: 48px 16px 32px; }
+    .guide-toggle span { display: none; }
+    .guide-panel { right: 16px; bottom: 84px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">🕹️</div>
+      <div class="brand-text">
+        <h1>RetroVault</h1>
+        <span>Runs entirely in your browser</span>
+      </div>
+    </div>
+    <div class="header-links">
+      <span class="pill-badge">Powered by EmulatorJS</span>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <h2>Your library. Your browser. No installs.</h2>
+  <p>Pick a console, choose a game, and it launches right here on the page using EmulatorJS. Add your own legally-owned ROM backups by editing the game list in the code.</p>
+</section>
+
+<main class="container">
+  <div class="section-heading">
+    <h3>Consoles</h3>
+    <span id="console-count"></span>
+  </div>
+  <div class="console-grid" id="console-grid"></div>
+</main>
+
+<section id="player-section" hidden>
+  <div class="player-panel">
+    <div class="player-panel-header">
+      <div>
+        <h4 id="player-title">Now Playing</h4>
+        <span id="player-subtitle"></span>
+      </div>
+      <button class="btn btn-ghost" id="player-close">Close Player</button>
+    </div>
+    <div id="game"></div>
+  </div>
+</section>
+
+<div class="overlay" id="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-header">
+      <div class="modal-header-info">
+        <div class="console-badge" id="modal-badge"></div>
+        <div>
+          <h3 id="modal-title" style="font-size:17px;"></h3>
+          <span style="font-size:12px;color:var(--text-muted);" id="modal-core-label"></span>
+        </div>
+      </div>
+      <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+    </div>
+    <p class="modal-hint">Sample game shown below. Replace its ROM URL in the <code>GAME_LIBRARY</code> object in the page's code, or use the "+" button to add your own.</p>
+    <div class="game-list" id="modal-game-list"></div>
+    <button class="add-rom-row" id="add-rom-btn" type="button">
+      <span class="plus">+</span>
+      <span>Add your own ROM / ISO</span>
+    </button>
+    <div class="add-menu" id="add-menu">
+      <button class="add-menu-option" id="opt-upload" type="button">
+        <span class="opt-icon">📂</span>
+        <span class="opt-text"><strong>Upload from device</strong><span class="opt-sub">Stays in your browser — no upload to any server</span></span>
+      </button>
+      <button class="add-menu-option" id="opt-url" type="button">
+        <span class="opt-icon">🔗</span>
+        <span class="opt-text"><strong>Paste a URL</strong><span class="opt-sub">Direct link to a hosted ROM file</span></span>
+      </button>
+      <div class="url-input-group" id="url-input-group">
+        <input type="text" id="rom-url-input" placeholder="https://example.com/roms/game.z64" />
+        <input type="text" id="rom-title-input" placeholder="Game title (optional)" />
+        <div class="url-input-actions">
+          <button class="btn btn-ghost" id="url-cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" id="url-confirm" type="button">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="guide-toggle" id="guide-toggle">
+  <span>📦</span><span>Hosting Guide</span>
+</button>
+
+<div class="guide-panel" id="guide-panel">
+  <h4>Hosting Large ROMs</h4>
+  <p class="guide-sub">GitHub blocks files over 100MB, and Pages repos should stay well under 1GB — most PS1/PSP/Dreamcast discs won't fit. Host the file elsewhere and just link to it.</p>
+
+  <div class="guide-step">
+    <h5>Option A · Internet Archive</h5>
+    <ul>
+      <li>Create a free account and upload your file as a new "item".</li>
+      <li>Once processed, copy its direct file link — it looks like <code>archive.org/download/your-item/file.iso</code>.</li>
+      <li>Archive.org serves files with permissive CORS headers, which EmulatorJS needs to fetch and run them in-browser.</li>
+    </ul>
+  </div>
+
+  <div class="guide-step">
+    <h5>Option B · Dropbox</h5>
+    <ul>
+      <li>Upload the file and generate a share link.</li>
+      <li>Change the ending from <code>?dl=0</code> to <code>?dl=1</code> to force a direct download stream.</li>
+      <li>CORS support can be inconsistent for very large files — test before relying on it.</li>
+    </ul>
+  </div>
+
+  <div class="guide-step">
+    <h5>Option C · Any CORS-enabled host</h5>
+    <p>Cloudflare R2, Backblaze B2, or your own server all work, as long as the host allows cross-origin requests.</p>
+  </div>
+
+  <div class="guide-step">
+    <h5>Then</h5>
+    <p>Paste the direct URL into the matching game's <code>url</code> field inside <code>GAME_LIBRARY</code> in the page's code, keeping the correct file extension (.z64, .bin/.cue, .chd, .cdi, .nds, .iso, etc.) so EmulatorJS can identify the format.</p>
+  </div>
+
+  <p class="guide-warning">Only host and load games you legally own a backup of.</p>
+</div>
+
+<footer>
+  <p>RetroVault is a browser-based emulator front-end only. It does not host, distribute, or bundle any copyrighted game files. You are responsible for only loading ROM backups you legally own.</p>
+  <p>Built with EmulatorJS · Hosted on GitHub Pages</p>
+</footer>
+
+<script>
+  // ---------------------------------------------------------------------
+  // GAME LIBRARY — edit this object to add your own consoles/games.
+  // `url` must point to a directly-downloadable, CORS-enabled ROM file.
+  // ---------------------------------------------------------------------
+  const GAME_LIBRARY = {
+    n64: {
+      name: "Nintendo 64",
+      short: "N64",
+      core: "n64",
+      color: "var(--n64)",
+      games: [
+        { title: "Super Mario 64", url: "https://your-file-host.example.com/roms/n64/super-mario-64.z64" }
+      ]
+    },
+    psx: {
+      name: "Sony PlayStation",
+      short: "PS1",
+      core: "psx",
+      color: "var(--psx)",
+      games: [
+        { title: "Castlevania: Symphony of the Night", url: "https://your-file-host.example.com/roms/psx/castlevania-sotn.bin" }
+      ]
+    },
+    dreamcast: {
+      name: "Sega Dreamcast",
+      short: "DC",
+      core: "dreamcast",
+      color: "var(--dreamcast)",
+      games: [
+        { title: "Sonic Adventure", url: "https://your-file-host.example.com/roms/dreamcast/sonic-adventure.chd" }
+      ]
+    },
+    vb: {
+      name: "Nintendo Virtual Boy",
+      short: "VB",
+      core: "vb",
+      color: "var(--vb)",
+      games: [
+        { title: "Mario's Tennis", url: "https://your-file-host.example.com/roms/vb/marios-tennis.vb" }
+      ]
+    },
+    nds: {
+      name: "Nintendo DS",
+      short: "NDS",
+      core: "nds",
+      color: "var(--nds)",
+      games: [
+        { title: "Mario Kart DS", url: "https://your-file-host.example.com/roms/nds/mario-kart-ds.nds" }
+      ]
+    },
+    psp: {
+      name: "PlayStation Portable",
+      short: "PSP",
+      core: "psp",
+      color: "var(--psp)",
+      games: [
+        { title: "Ridge Racer", url: "https://your-file-host.example.com/roms/psp/ridge-racer.iso" }
+      ]
+    }
+  };
+
+  const EMULATORJS_BASE = "https://cdn.jsdelivr.net/npm/emulatorjs@latest/data/";
+
+  const grid = document.getElementById("console-grid");
+  const consoleCount = document.getElementById("console-count");
+  const overlay = document.getElementById("modal-overlay");
+  const modalBadge = document.getElementById("modal-badge");
+  const modalTitle = document.getElementById("modal-title");
+  const modalCoreLabel = document.getElementById("modal-core-label");
+  const modalGameList = document.getElementById("modal-game-list");
+  const modalClose = document.getElementById("modal-close");
+  const playerSection = document.getElementById("player-section");
+  const playerTitle = document.getElementById("player-title");
+  const playerSubtitle = document.getElementById("player-subtitle");
+  const playerClose = document.getElementById("player-close");
+  const gameMount = document.getElementById("game");
+  const guideToggle = document.getElementById("guide-toggle");
+  const guidePanel = document.getElementById("guide-panel");
+  const addRomBtn = document.getElementById("add-rom-btn");
+  const addMenu = document.getElementById("add-menu");
+  const optUpload = document.getElementById("opt-upload");
+  const optUrl = document.getElementById("opt-url");
+  const urlInputGroup = document.getElementById("url-input-group");
+  const romUrlInput = document.getElementById("rom-url-input");
+  const romTitleInput = document.getElementById("rom-title-input");
+  const urlCancel = document.getElementById("url-cancel");
+  const urlConfirm = document.getElementById("url-confirm");
+
+  const CUSTOM_STORE_KEY = "retrovault_custom_games";
+  let activeConsoleKey = null;
+  let fileInput = null;
+
+  function loadCustomGames() {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_STORE_KEY) || "{}"); }
+    catch (e) { return {}; }
+  }
+  function saveCustomGames(data) {
+    try { localStorage.setItem(CUSTOM_STORE_KEY, JSON.stringify(data)); } catch (e) { /* ignore quota */ }
+  }
+  function getGamesForConsole(key) {
+    const custom = loadCustomGames()[key] || [];
+    return [...GAME_LIBRARY[key].games, ...custom];
+  }
+  function addCustomGame(key, title, url) {
+    const all = loadCustomGames();
+    if (!all[key]) all[key] = [];
+    all[key].push({ title, url });
+    saveCustomGames(all);
+  }
+  function removeCustomGame(key, index) {
+    const all = loadCustomGames();
+    if (!all[key]) return;
+    all[key].splice(index, 1);
+    saveCustomGames(all);
+  }
+
+  const consoleKeys = Object.keys(GAME_LIBRARY);
+  consoleCount.textContent = consoleKeys.length + " systems available";
+
+  function renderConsoleGrid() {
+    grid.innerHTML = consoleKeys.map((key) => {
+      const c = GAME_LIBRARY[key];
+      const total = getGamesForConsole(key).length;
+      return `
+        <button class="console-card" style="--accent-color:${c.color}" data-console="${key}">
+          <div class="console-badge">${c.short}</div>
+          <h4>${c.name}</h4>
+          <p>${total} game${total === 1 ? "" : "s"} in library</p>
+          <div class="card-footer">
+            <span>Browse games</span>
+            <span>&rarr;</span>
+          </div>
+        </button>
+      `;
+    }).join("");
+
+    grid.querySelectorAll(".console-card").forEach((card) => {
+      card.addEventListener("click", () => openModal(card.dataset.console));
+    });
+  }
+
+  let lastFocusedElement = null;
+
+  function openModal(key) {
+    const c = GAME_LIBRARY[key];
+    activeConsoleKey = key;
+    lastFocusedElement = document.activeElement;
+
+    modalBadge.style.background = c.color;
+    modalBadge.textContent = c.short;
+    modalTitle.textContent = c.name;
+    modalCoreLabel.textContent = "Core: " + c.core;
+
+    renderGameList(key);
+
+    addMenu.classList.remove("open");
+    urlInputGroup.classList.remove("open");
+    addRomBtn.style.display = "flex";
+
+    overlay.classList.add("open");
+    modalClose.focus();
+  }
+
+  function renderGameList(key) {
+    const c = GAME_LIBRARY[key];
+    const baseCount = c.games.length;
+    const allGames = getGamesForConsole(key);
+
+    modalGameList.innerHTML = allGames.map((game, index) => {
+      const isCustom = index >= baseCount;
+      const subText = isCustom ? game.url : "Demo ROM URL — replace in code";
+      return `
+        <div class="game-row${isCustom ? " custom" : ""}" style="--accent-color:${c.color}">
+          <div>
+            <div class="game-row-title">${game.title}</div>
+            <div class="game-row-sub">${subText}</div>
+          </div>
+          <div class="game-row-actions">
+            ${isCustom ? `<button class="icon-btn remove-btn" data-console="${key}" data-index="${index}" aria-label="Remove">✕</button>` : ""}
+            <button class="btn btn-primary" style="--accent-color:${c.color}" data-console="${key}" data-index="${index}">Play</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    modalGameList.querySelectorAll("button[data-index]:not(.remove-btn)").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        launchGame(btn.dataset.console, Number(btn.dataset.index));
+      });
+    });
+    modalGameList.querySelectorAll(".remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        removeCustomGame(btn.dataset.console, Number(btn.dataset.index) - baseCount);
+        renderGameList(btn.dataset.console);
+        renderConsoleGrid();
+      });
+    });
+  }
+
+  function closeModal() {
+    overlay.classList.remove("open");
+    if (lastFocusedElement) lastFocusedElement.focus();
+  }
+
+  function launchGame(consoleKey, gameIndex) {
+    const c = GAME_LIBRARY[consoleKey];
+    const allGames = getGamesForConsole(consoleKey);
+    const game = allGames[gameIndex];
+    if (!game) return;
+
+    closeModal();
+
+    playerTitle.textContent = game.title;
+    playerSubtitle.textContent = c.name + " · Core: " + c.core;
+    playerSection.hidden = false;
+
+    resetEmulator();
+
+    window.EJS_player = "#game";
+    window.EJS_core = c.core;
+    window.EJS_gameUrl = game.url;
+    window.EJS_gameName = game.title;
+    window.EJS_pathtoData = EMULATORJS_BASE;
+    window.EJS_startOnLoaded = true;
+    window.EJS_backgroundColor = "#000000";
+
+    const script = document.createElement("script");
+    script.id = "ejs-loader-script";
+    script.src = EMULATORJS_BASE + "loader.js";
+    document.body.appendChild(script);
+
+    playerSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function resetEmulator() {
+    gameMount.innerHTML = "";
+    const oldScript = document.getElementById("ejs-loader-script");
+    if (oldScript) oldScript.remove();
+    if (window.EJS_emulator) {
+      try { window.EJS_emulator.callEvent && window.EJS_emulator.callEvent("exit"); } catch (e) { /* ignore */ }
+      window.EJS_emulator = undefined;
+    }
+  }
+
+  playerClose.addEventListener("click", () => {
+    resetEmulator();
+    playerSection.hidden = true;
+  });
+
+  modalClose.addEventListener("click", closeModal);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && overlay.classList.contains("open")) closeModal();
+  });
+
+  guideToggle.addEventListener("click", () => {
+    guidePanel.classList.toggle("open");
+  });
+
+  addRomBtn.addEventListener("click", () => {
+    addMenu.classList.toggle("open");
+    urlInputGroup.classList.remove("open");
+  });
+
+  optUpload.addEventListener("click", () => {
+    if (!fileInput) {
+      fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.style.display = "none";
+      document.body.appendChild(fileInput);
+      fileInput.addEventListener("change", handleFileUpload);
+    }
+    fileInput.accept = ".z64,.n64,.v64,.bin,.cue,.chd,.iso,.cdi,.nds,.gba,.gbc,.gb,.vb,.rom,.zip";
+    fileInput.click();
+  });
+
+  function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file || !activeConsoleKey) return;
+    const objectUrl = URL.createObjectURL(file);
+    const title = romTitleInput.value.trim() || file.name.replace(/\.[^.]+$/, "");
+    addCustomGame(activeConsoleKey, title, objectUrl);
+    renderGameList(activeConsoleKey);
+    renderConsoleGrid();
+    addMenu.classList.remove("open");
+    romTitleInput.value = "";
+  }
+
+  optUrl.addEventListener("click", () => {
+    urlInputGroup.classList.add("open");
+    romUrlInput.focus();
+  });
+
+  urlCancel.addEventListener("click", () => {
+    urlInputGroup.classList.remove("open");
+    romUrlInput.value = "";
+    romTitleInput.value = "";
+  });
+
+  urlConfirm.addEventListener("click", () => {
+    const url = romUrlInput.value.trim();
+    if (!url || !activeConsoleKey) return;
+    const title = romTitleInput.value.trim() || url.split("/").pop() || "Untitled";
+    addCustomGame(activeConsoleKey, title, url);
+    renderGameList(activeConsoleKey);
+    renderConsoleGrid();
+    urlInputGroup.classList.remove("open");
+    romUrlInput.value = "";
+    romTitleInput.value = "";
+  });
+
+  romUrlInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") urlConfirm.click();
+  });
+  romTitleInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") urlConfirm.click();
+  });
+
+  renderConsoleGrid();
+</script>
+
+</body>
+</html>
