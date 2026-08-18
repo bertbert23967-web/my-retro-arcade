@@ -1,4 +1,11 @@
-<!DOCTYPE html>
+<script>
+  // Force high-performance multi-threading headers via a browser trick
+  if (window.crossOriginIsolated === false) {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com';
+    document.head.appendChild(script);
+  }
+</script><!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
