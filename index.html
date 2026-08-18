@@ -3,53 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Retro Arcade</title>
-    <!-- Force performance multi-threading headers for 3D Emulators -->
+    <title>My AI Retro Arcade</title>
+    <!-- Multi-threading browser security injector for 3D game engines -->
     <script src="https://unpkg.com"></script>
     
     <style>
+        * { box-sizing: border-box; }
         body {
-            background-color: #121212;
-            color: #ffffff;
-            font-family: sans-serif;
+            background-color: #0b0b0f;
+            color: #f1f1f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             text-align: center;
             padding: 20px;
+            margin: 0;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
+        .container { max-width: 900px; margin: 0 auto; padding-bottom: 60px; }
+        h1 { font-size: 2.2rem; margin-bottom: 5px; color: #fff; text-shadow: 0 0 10px rgba(255,0,85,0.3); }
+        .subtitle { color: #8a8a98; margin-bottom: 30px; font-size: 1rem; }
+        
+        /* Grid of Console Cards */
         .console-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
         }
         .card {
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #333;
+            background: linear-gradient(145deg, #161622, #12121a);
+            padding: 30px 20px;
+            border-radius: 16px;
+            border: 1px solid #232335;
             cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         .card:hover {
+            transform: translateY(-4px);
             border-color: #ff0055;
+            box-shadow: 0 8px 24px rgba(255, 0, 85, 0.2);
         }
+        .card h3 { margin: 0; font-size: 1.3rem; letter-spacing: 0.5px; }
+
+        /* Game List Menu Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 8, 0.95);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background: #12121a;
+            border: 1px solid #2a2a40;
+            border-radius: 20px;
+            width: 100%; max-width: 500px;
+            padding: 25px;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 15px; right: 20px;
+            font-size: 24px; cursor: pointer; color: #8a8a98;
+        }
+        .close-btn:hover { color: #fff; }
+        .game-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .game-item {
+            background: #1c1c28;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #2d2d42;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            text-align: left;
+        }
+        .game-item:hover { background: #ff0055; color: #fff; border-color: #ff0055; }
+
+        /* Emulator Player Screen View */
+        #emulator-container {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 200;
+        }
+        #emulator-player { width: 100%; height: 100%; border: none; }
+        .back-to-menu {
+            position: absolute;
+            top: 10px; left: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff; border: none;
+            padding: 8px 16px; border-radius: 20px;
+            cursor: pointer; font-weight: bold; z-index: 210;
+        }
+        .back-to-menu:hover { background: #ff0055; }
     </style>
 </head>
 <body>
-    <div class="container">
+
+    <div class="container" id="main-layout">
         <h1>🕹️ My AI Retro Arcade 🎮</h1>
-        <p>Select a console to view games</p>
+        <div class="subtitle">Select a console to view available game files</div>
         
         <div class="console-grid">
-            <div class="card" onclick="alert('N64 Selected! Ready to load game core.')">Nintendo 64</div>
-            <div class="card" onclick="alert('PS1 Selected! Ready to load game core.')">PlayStation 1</div>
-            <div class="card" onclick="alert('Dreamcast Selected! Ready to load game core.')">Sega Dreamcast</div>
-            <div class="card" onclick="alert('Virtual Boy Selected! Ready to load game core.')">Virtual Boy</div>
-            <div class="card" onclick="alert('DS Selected! Ready to load game core.')">Nintendo DS</div>
-            <div class="card" onclick="alert('PSP Selected! Ready to load game core.')">PlayStation Portable</div>
+            <div class="card" onclick="openConsole('n64', 'Nintendo 64')"><h3>Nintendo 64</h3></div>
+            <div class="card" onclick="openConsole('psx', 'PlayStation 1')"><h3>PlayStation 1</h3></div>
+            <div class="card" onclick="openConsole('dreamcast', 'Sega Dreamcast')"><h3>Sega Dreamcast</h3></div>
+            <div class="card" onclick="openConsole('vb', 'Virtual Boy')"><h3>Virtual Boy</h3></div>
+            <div class="card" onclick="openConsole('nds', 'Nintendo DS')"><h3>Nintendo DS</h3></div>
+            <div class="card" onclick="openConsole('psp', 'PlayStation Portable')"><h3>PlayStation Portable</h3></div>
         </div>
     </div>
+
+    <!-- Selection Menu Window -->
+    <div class="modal" id="gameModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Console Games</h2>
+            <div class="game-list" id="gameListContainer">
+                <!-- Games injected automatically via script -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Screen Game Player -->
+    <div id="emulator-container">
+        <button class="back-to-menu" onclick="closeEmulator()">Exit Game</button>
+        <div id="emulator-player"></div>
+    </div>
+
+    <script>
+        // Database library mapping your console platforms and ROM files
+        const arcadeDatabase = {
+            n64: [
+                { name: "Super Mario 64 (Demo File)", url: "https://example.com" }
+            ],
+            psx: [
+                { name: "Castlevania (Demo File)", url: "https://example.com" }
+            ],
+            dreamcast: [
+                { name: "Sonic Adventure (Demo File)", url: "https://example.com" }
+            ],
+            vb: [
+                { name: "Mario's Tennis (Demo File)", url: "https://example.com" }
+            ],
+            nds: [
+                { name: "Mario Kart DS (Demo File)", url: "https://example.com" }
+            ],
+            psp: [
+                { name: "Ridge Racer (Demo File)", url: "https://example.com" }
+            ]
+        };
+
+        function openConsole(systemId, systemName) {
+            document.getElementById('modalTitle').innerText = systemName;
+            const container = document.getElementById('gameListContainer');
+            container.innerHTML = '';
+            
+            const games = arcadeDatabase[systemId] || [];
+            if(games.length === 0) {
+                container.innerHTML = '<p style="color:#8a8a98">No games uploaded yet.</p>';
+            } else {
+                games.forEach(game => {
+                    const btn = document.createElement('div');
+                    btn.className = 'game-item';
+                    btn.innerText = game.name;
+                    btn.onclick = () => launchGame(systemId, game.url);
+                    container.appendChild(btn);
+                });
+            }
+            document.getElementById('gameModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('gameModal').style.display = 'none';
+        }
+
+        function launchGame(systemCore, romUrl) {
+            closeModal();
+            document.getElementById('emulator-container').style.display = 'block';
+            
+            // Generate full EmulatorJS framework core inside container element
+            const playerDiv = document.getElementById('emulator-player');
+            playerDiv.innerHTML = ''; 
+            
+            const iframe = document.createElement('iframe');
+            // Points securely to the official EmulatorJS network system setup
+            iframe.src = `https://emulatorjs.org{systemCore}&rom=${encodeURIComponent(romUrl)}`;
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            playerDiv.appendChild(iframe);
+        }
+
+        function closeEmulator() {
+            document.getElementById('emulator-container').style.display = 'none';
+            document.getElementById('emulator-player').innerHTML = '';
+        }
+    </script>
 </body>
 </html>
